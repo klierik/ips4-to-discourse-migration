@@ -1,0 +1,214 @@
+database:
+  host: "172.17.0.1"
+  port: 3306
+  username: "root"
+  password: "root"
+  name: "forum_db"
+  table_prefix: ""
+
+import:
+  batch_size: 5000
+  uploads_dir: "/mnt/ips4_uploads"
+  
+  # =========================================================================================
+  # IMPORT STEPS (Set to false to skip a specific step during a run)
+  # =========================================================================================
+  run_users: true
+  run_categories: true
+  run_topics: true
+  run_posts: true
+  run_likes: true
+  run_tags: true
+  run_articles: true
+  run_private_messages: true
+  run_seo_permalinks: true
+
+  wipe_revisions: false          # Delete post revision history after each update (prevents import runs from polluting post history)
+  max_attachment_size_kb: 262144 # 256MB limit for imports
+
+  # =========================================================================================
+  # ALLOWED IFRAME DOMAINS
+  # =========================================================================================
+  # Domains whose <iframe> tags are preserved as live embeds in post content.
+  # These are added to Discourse's SiteSetting.allowed_iframes at script startup so the
+  # tags survive the HTML sanitizer when posts are cooked.
+  # Values must be full URL prefixes starting with https:// and ending with / (Discourse validation requirement).
+  # Add any other embed providers your forum used (e.g. https://codesandbox.io/, https://replit.com/).
+  allowed_iframe_domains:
+    - https://jsfiddle.net/
+    - https://codepen.io/
+
+  allowed_extensions:
+    # Archives
+    - zip
+    - rar
+    - "7z"
+    - tar
+    - gz
+    # Documents
+    - pdf
+    - doc
+    - docx
+    - xls
+    - xlsx
+    - csv
+    - txt
+    # Images
+    - psd
+    - bmp
+    - ico
+    # Media
+    - mp3
+    - mp4
+    - mkv
+    - mov
+    # Fonts
+    - ttf
+    - otf
+    - woff
+    # Code & Development
+    - html
+    - htm
+    - php
+    - sql
+    - xml
+    - css
+    - js
+    - log
+
+advanced_options:
+  # =========================================================================================
+  # 1. DUPLICATE EMAIL HANDLING
+  # =========================================================================================
+  # Discourse requires unique email addresses. If a user in the IPS4 database has an email
+  # that is already taken by a previously imported user (e.g. from a merged forum or spammer):
+  # 
+  # NOTE: Discourse strips dots from Gmail addresses before comparing. This means:
+  # - useremail@gmail.com
+  # - user.email@gmail.com
+  # - us.er.em.ail@gmail.com
+  # Are all considered the EXACT SAME duplicate email by Discourse, and will trigger this error.
+  #
+  # Options:
+  #   - 'dummy_email': (Recommended) Imports the user but assigns them a generated fallback 
+  #                    email like `imported_duplicate_12345@gmail.com` (preserving the original provider).
+  #   - 'skip':        Completely skips importing this user. WARNING: All their topics/posts
+  #                    will become orphaned.
+  duplicate_email_handling: "dummy_email"
+  
+  # =========================================================================================
+  # 2. INVALID EMAIL HANDLING
+  # =========================================================================================
+  # Discourse blocks known disposable email providers (e.g., mailinator.com) or completely
+  # invalid formats (e.g. missing '@').
+  #
+  # Options:
+  #   - 'dummy_email': (Recommended) Imports user with `imported_fallback_12345@example.invalid`
+  #   - 'skip':        Skips the user entirely.
+  invalid_email_handling: "dummy_email"
+  
+  # =========================================================================================
+  # 3. DUPLICATE USERNAME HANDLING
+  # =========================================================================================
+  # Discourse requires unique usernames. If two users had the same display name in IPS4:
+  #
+  # Options:
+  #   - 'append_id':   (Recommended) Imports the user as `Username_12345` (appending their ID)
+  #   - 'skip':        Skips the user entirely.
+  duplicate_username_handling: "append_id"
+  
+  # =========================================================================================
+  # 4. INVALID USERNAME HANDLING
+  # =========================================================================================
+  # Discourse strictly enforces alphanumeric usernames (no spaces, special chars, etc). Some 
+  # old forums allowed things like "Cool!@#User".
+  #
+  # Examples of transformation with 'sanitize_and_append_id' for User ID 12345:
+  #   - "Cool!@#User"  -> "CoolUser_12345"
+  #   - "John Doe"     -> "JohnDoe_12345"
+  #   - "!@#$%"        -> "user_12345" (if it becomes empty after stripping)
+  #
+  # Options:
+  #   - 'sanitize_and_append_id': (Recommended) Strips special chars and adds ID.
+  #   - 'skip':                   Skips the user entirely.
+  invalid_username_handling: "sanitize_and_append_id"
+  
+  # =========================================================================================
+  # 5. ORPHANED TOPIC HANDLING
+  # =========================================================================================
+  # If a topic's author was completely deleted from the IPS4 database, or if you chose 'skip' 
+  # for their user import above, the topic will have no author.
+  #
+  # Options:
+  #   - 'assign_system': (Recommended) Imports the topic but attributes it to the generic 
+  #                      Discourse 'system' account. The topic is preserved.
+  #   - 'skip':          Skips importing the topic completely.
+  orphaned_topic_handling: "assign_system"
+  
+  # =========================================================================================
+  # 6. ORPHANED POST HANDLING
+  # =========================================================================================
+  # Similar to topics, if a specific reply/post in a thread was made by a missing user:
+  #
+  # Options:
+  #   - 'assign_system': (Recommended) Imports the post and attributes it to 'system'.
+  #   - 'skip':          Skips importing the post, leaving a gap in the thread.
+  orphaned_post_handling: "assign_system"
+
+permalink_options:
+  # =========================================================================================
+  # POST ANCHOR REDIRECTS (index.php?showtopic=TID&p=PID)
+  # =========================================================================================
+  # IPS4 links often include a post anchor parameter (&p=PID) pointing to a specific reply.
+  # Discourse can match these exact query strings if a Permalink record exists for each one.
+  #
+  # When enabled, the permalink fixer creates one record per imported post:
+  #   index.php?showtopic=47375&p=123456  →  Discourse topic (post anchor is dropped)
+  #
+  # The redirect lands on the topic page, not the specific post. This is intentional —
+  # Discourse does not support per-post permalink targets in the Permalink model.
+  #
+  # Warning: Creates one DB record per post. For large forums (100k+ posts) this can take
+  # several minutes and adds significant rows to the permalinks table.
+  #
+  # Recommended: true (ensures Google-indexed post anchor URLs return 301 instead of 404)
+  create_post_anchor_redirects: true
+
+  # =========================================================================================
+  # FORCE-UPDATE EXISTING POST ANCHOR RECORDS
+  # =========================================================================================
+  # If create_post_anchor_redirects was already run and created topic-level redirects
+  # (pointing to topic_id), set this to true to overwrite them with post-level redirects
+  # (external_url: /t/slug/TID/POST_NUMBER) that land on the exact post.
+  #
+  # Safe to re-run: records not related to post anchors are never touched.
+  # Set back to false after the upgrade run to avoid unnecessary updates on future runs.
+  force_update_post_anchors: false
+
+website: false
+  # =========================================================================================
+  # INTERNAL LINK RESOLUTION
+  # =========================================================================================
+  # Resolves IPS4 internal topic links (showtopic=N, /topic/N-slug/) to Discourse topic URLs.
+  # The href is updated to the Discourse path (/t/slug/id).
+  # If the link text itself looks like a URL (contains the old domain or showtopic pattern),
+  # it is also replaced with new_domain + Discourse path.
+  #
+  # Set to false to skip internal link resolution entirely:
+  #   website: false
+  # old_domain: "forum.com"    # Old IPS4 site domain — used to detect internal links
+  # new_domain: "forum.dev"    # New Discourse site domain — used in link text replacement
+
+debug:
+  # =========================================================================================
+  # SINGLE POST DEBUG MODE
+  # =========================================================================================
+  # Set to a Discourse post ID to process only that post and exit immediately.
+  # The script prints the IPS4 source HTML, the old raw, and the new cleaned-up raw,
+  # then saves the change to the database if the content actually differs.
+  #
+  # Useful for testing clean_up output on a specific post without running a full re-import.
+  # Can also be set via the DEBUG_POST_ID environment variable.
+  #
+  # Set to 0 or leave blank to run normally.
+  single_post_id: 0

@@ -1,0 +1,53 @@
+# --- Project Configuration (CRITICAL) ---
+# Do not push real passwords or credentials
+ipboard4_config.yml
+
+# Ignore local logs and temporary files
+logs/*.log
+logs/
+.claude/
+issues/
+
+# --- Ruby & Scripts ---
+# If you use Bundler locally
+.bundle/
+vendor/bundle
+# Temporary files from script editing
+*.swp
+*~
+
+# --- macOS (System Files) ---
+.DS_Store
+.AppleDouble
+.LSOverride
+# Folder icons
+Icon?
+# Files created when viewing in Finder
+._*
+.DocumentRevisions-V100
+.fseventsd
+.Spotlight-V100
+.TemporaryItems
+.Trashes
+.VolumeIcon.icns
+.com.apple.timemachine.donotpresent
+
+# --- Windows (In case of collaboration) ---
+Thumbs.db
+Thumbs.db:encryptable
+ehthumbs.db
+ehthumbs_vista.db
+[Dd]esktop.ini
+
+# --- Linux ---
+*~
+.fuse_hidden*
+.directory
+.Trash-*
+.nfs*
+
+# --- IDE & Editors (VS Code, RubyMine, etc.) ---
+.vscode/
+.idea/
+*.sublime-project
+*.sublime-workspace
